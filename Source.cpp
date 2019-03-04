@@ -1,13 +1,15 @@
 #include <iostream>
 #include <list>
 #include <vector>
+#include <ctime>
 
 
+enum Colors { White, Grey, Black };
 class Vertex
 {
 private:
 	int num;
-	int value;//можно задавать цвета(состо€ни€)
+	int value=White;//можно задавать цвета(состо€ни€) цвет по умолчанию
 	std::vector<Vertex *> adjacent_vertices;
 	int power;
 public:
@@ -59,18 +61,18 @@ public:
 	void set_position(Vertex * pos1, Vertex * pos2) { position.first = pos1; position.second = pos2; };
 	void set_value(int value_) { value = value_; };
 
-	void synchronization(std::vector<Vertex *> vertices)
+	void synchronization(std::vector<Vertex *> vertieces)
 	{
 		Vertex *a, *b;
-		for (int i = 0; i < vertices.size(); ++i)
+		for (int i = 0; i < vertieces.size(); ++i)
 		{
-			if (vertices[i]->get_num() == pos.first)
+			if (vertieces[i]->get_num() == pos.first)
 			{
-				a = vertices[i];
+				a = vertieces[i];
 			}
-			if (vertices[i]->get_num() == pos.second)
+			if (vertieces[i]->get_num() == pos.second)
 			{
-				b = vertices[i];
+				b = vertieces[i];
 			}
 		}
 		a->set_adjacent(b);
@@ -89,27 +91,43 @@ class Graph
 public:
 	std::vector<Vertex *> vertices;
 	std::vector<Edge *> edges;
-	int size;
-	std::vector<Vertex *> dfs_vertices;
+	int n;//количество вершин
+	int m; //количество ребер
 
-	Graph(int size_)
+	Graph(int n_, int m_)
 	{
 		//генератор графов))
-		size = size_;
-		for (int i = 0; i < size; i++)
+		//Ёто ооочень круто! Ќо мы не можем контролировать количество ребер, 
+		//а нам его нужно регулировать, чтобы проводить разные эксперименты в отчете
+		//поправила, все работает
+		n = n_;
+		m = m_;
+		for (int i = 0; i < n; i++)
 		{
 			vertices.push_back(new Vertex(i));
 		}
 
-		for (int i = 0; i < size; ++i)
+		for (int k = 0; k < m; ++k)
 		{
-			for (int j = i+1; j < size; ++j)
+			bool f = 1;
+			int i, j;
+			while  (f == 1)
 			{
-				if (rand() % 2 == 1)
+				f = 0;
+				i = (rand() % (n - 1)); //рандомное число от 0 до n-2
+				j = (rand() % (n - i - 1)) + i + 1;//получаем рандомное число от i+1 до n-1 - индекс конца ребра
+				for (int l = 0; l < edges.size(); l++)
 				{
-					edges.push_back(new Edge(vertices[i], vertices[j]));
+					if ((edges[l]->get_pos().first == i) && (edges[l]->get_pos().second == j))
+					{
+						f = 1;
+						break;
+					}
 				}
 			}
+			
+			edges.push_back(new Edge(vertices[i], vertices[j]));
+			
 		}
 	};
 
@@ -127,7 +145,7 @@ public:
 	std::vector<Vertex *> dfs(int v)
 	{
 		//тут у мен€ отключилс€ мозг(( пока не сообразила...но € думаю все тип топ
-	};
+	}
 	//прописать функцию генерации разных графов заданного размера
 	//мб прописать функцию dfs от заданной вершины котора€ возвращает вектор посещений 
 };
@@ -136,12 +154,17 @@ public:
 int main()
 {
 	setlocale(LC_ALL, "Russian");
+	srand(time(0));
 	//решила все таки использовать вектор, так лист не поддерживает произвольный доступ к элементу
 	//вектор будет подходить так как мы в процессе работы нам не нужно удал€ть вершины или ребра
 	//нам нужно только извен€ть состо€ни€ и значени€ вершин и ребер
 	//так что € думаю все будет ок))
 
-	Graph g(10);
+	Graph g(5, 5);
+	for (int i = 0; i < 5; i++)
+	{
+		std::cout<<g.vertices[i]->get_value()<<std::endl;
+	}
 	g.print();
 
 	/*
