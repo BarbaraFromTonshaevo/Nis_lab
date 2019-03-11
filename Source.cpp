@@ -2,6 +2,14 @@
 #include <list>
 #include <vector>
 #include <ctime>
+#include <algorithm>
+
+
+
+
+
+
+
 
 enum Colors{White, Gray, Black};
 class Vertex
@@ -64,8 +72,11 @@ private:
 
 	std::pair<Vertex *, Vertex *> position;//можно через указатели
 	std::pair<int, int> pos;//либо прописывать номер вершины
+	//int64_t value64;
 	int value;
+	bool tree = 0;
 	int num; //какой по счету в векторе
+	int64_t posibility = 0;
 
 public:
 
@@ -86,19 +97,33 @@ public:
 	};
 	Edge(int num1, int num2, std::vector<Vertex *> vertices, int num_)
 	{
+		
 		num = num_;
 		pos.first = num1;
 		pos.second = num2;
 		synchronization(vertices);
+		
 	};
 
 	std::pair<Vertex *, Vertex *> get_position() { return position; };
 	std::pair<int, int> get_pos() { return pos; };
 	int get_value() { return value; };
+	bool get_tree() { return tree; };
+	int64_t get_posibility() { return posibility; };
+	//int64_t get_value64() { return value64; };
+
 
 	void set_pos(int pos1, int pos2) { pos.first = pos1; pos.second = pos2; };
 	//void set_position(Vertex * pos1, Vertex * pos2) { position.first = pos1; position.second = pos2; };
 	void set_value(int value_) { value = value_; };
+	void set_tree(bool tree_) { tree = tree_; };
+	void set_posibility()
+	{
+		posibility = posibility << 1;
+		posibility = posibility + value;
+	};
+	void set_posibility(int64_t value_) { posibility = value_; };
+
 
 	void synchronization(std::vector<Vertex *> vertices)
 	{
@@ -128,6 +153,70 @@ public:
 	//я подумала что будет удобно вбивать ребра по номерам вершин, а в программе лучше пользоваться указателями
 };
 
+
+void countingSort(std::vector<int> &A)
+{
+	int n = A.size();
+	int C = *(std::max_element(A.begin(), A.end())) + 1;
+	std::vector<int> R(A.size());
+	std::vector<int> B(C);
+
+	for (int i = 0; i < n; i++)
+		++B[A[i]];
+
+	for (int i = 1; i < C; i++)
+		B[i] += B[i - 1];
+
+	for (int i = n - 1; i >= 0; --i)
+		R[--B[A[i]]] = A[i];
+	A = R;
+}
+
+
+void radixSortEdges(std::vector<Edge *> &A)
+{
+	int n = A.size();
+	int C = 2;
+	std::vector<int64_t> R(n);
+	std::vector<std::pair<int64_t, Edge*>>FR(n);
+	std::vector<int64_t> B(C);
+	for (int s = 0; s < 64; s++)
+	{
+
+		for (int i = 0; i < n; i++)
+		{
+			R[i] = (A[i]->get_posibility() >> s) % 2;
+			FR[i].first = 0;
+		}
+
+		for (int i = 0; i < C; i++)
+		{
+			B[i] = 0;
+		}
+
+		for (int i = 0; i < n; i++)
+			++B[R[i]];
+
+		for (int i = 1; i < C; i++)
+			B[i] += B[i - 1];
+
+		for (int i = n - 1; i >= 0; --i)
+		{
+			FR[B[R[i]] - 1].first = A[i]->get_posibility();
+			FR[--B[R[i]]].second = A[i];
+		}
+
+		for (int i = 0; i < n; i++)
+		{
+			A[i] = FR[i].second;
+			A[i]->set_posibility(FR[i].first);
+		}
+
+
+	}
+}
+
+
 class Graph
 {
 public:
@@ -138,6 +227,9 @@ public:
 	int m;
 	std::vector<Vertex *> dfs_vertices;
 	std::vector<Edge *> dfs_edges;
+	std::vector<Edge *> bridge;
+	std::vector<Edge *> sort_edges;
+	std::vector<std::pair<Edge *, Edge *>> bridge_2;	
 
 	Graph(int n_, int m_)
 	{
@@ -227,8 +319,9 @@ public:
 		{
 			if (vertices[v]->get_adjacent_vertices()[i]->get_value() == 0)//не посещали
 			{
-				dfs_edges.push_back(edges[vertices[v]->get_adjacent_edges()[i]]);
 				dfs_int(vertices[v]->get_adjacent_vertices()[i]->get_num());
+				dfs_edges.push_back(edges[vertices[v]->get_adjacent_edges()[i]]);
+				edges[vertices[v]->get_adjacent_edges()[i]]->set_tree(1);//ребро остовное
 			}
 
 		}
@@ -236,8 +329,115 @@ public:
 		dfs_vertices.push_back(vertices[v]);
 	};
 
-	//прописать функцию генерации разных графов заданного размера
-	//мб прописать функцию dfs от заданной вершины которая возвращает вектор посещений 
+	void clean()
+	{
+		for (int i = 0; i < vertices.size(); ++i)
+			vertices[i]->set_value(White);
+		for (int i = 0; i < edges.size(); ++i)
+			edges[i]->set_value(0);
+	}
+
+	void dfs_clean()
+	{
+		dfs_vertices.clear();
+		dfs_edges.clear();
+	}
+
+	void set_link(int start, int size)
+	{
+		std::pair<Edge *, Edge*> e;
+		for (int i = start; i < start+size; i++)
+		{
+			for (int j = i + 1; j < start+size; j++)
+			{
+				e.first = sort_edges[i];
+				e.second = sort_edges[j];
+				bridge_2.push_back(e);
+
+			}
+		}
+	}
+
+	void repead_method()
+	{
+		for (int it = 0; it < 63; ++it)
+		{
+			one_bridge();
+			for (int i = 0; i < edges.size(); ++i)
+			{
+				edges[i]->set_posibility();
+			}
+		}
+		for (int i = 0; i < edges.size(); ++i)
+		{
+			if (!edges[i]->get_posibility())
+			{
+				bridge.push_back(edges[i]);
+			}
+		}
+		
+		sort_edges = edges;
+		radixSortEdges(sort_edges);
+		int count = 0;
+	
+		for (int i = 0; i < sort_edges.size() - 1; ++i)
+		{
+			if (sort_edges[i]->get_posibility() == sort_edges[i + 1]->get_posibility())
+			{
+				count++;
+				if (i == sort_edges.size() - 2)
+				{
+					set_link(i - count+1, count + 1);
+				}
+			}
+			else if (count > 0) 
+			{
+				set_link(i-count, count+1);
+				count = 0;
+			}
+			
+		}
+
+		std::cout << "2-BRIGES : " << std::endl;
+	
+		for (int i = 0; i < bridge_2.size(); ++i)
+		{
+			std::cout << bridge_2[i].first->get_pos().first << "---" << bridge_2[i].first->get_pos().second << " <---> " << bridge_2[i].second->get_pos().first << "---" << bridge_2[i].second->get_pos().second << std::endl;
+		}
+		
+	
+
+	};
+
+	void one_bridge()
+	{
+		int sum;
+
+		clean();
+		dfs_clean();
+		dfs_int(0);
+
+		for (int i = 0; i < edges.size(); ++i)
+		{
+			if (!edges[i]->get_tree())
+			{
+				edges[i]->set_value(rand() % 2);
+			}
+		}
+		for (int i = 0; i < dfs_vertices.size() - 1; i++)
+		{
+			sum = 0;
+			for (int j = 0; j < dfs_vertices[i]->get_adjacent_edges().size(); ++j)
+			{
+				if (edges[dfs_vertices[i]->get_adjacent_edges()[j]] != dfs_edges[i])
+				{
+					sum = sum ^ edges[dfs_vertices[i]->get_adjacent_edges()[j]]->get_value();//считаем сумму по модулю всех ребер, кроме той которой присваиваем значение
+				}
+			}
+			dfs_edges[i]->set_value(sum);
+		}
+	}
+
 };
 
 
@@ -245,16 +445,11 @@ int main()
 {
 	setlocale(LC_ALL, "Russian");
 	srand(time(0));
-	//решила все таки использовать вектор, так лист не поддерживает произвольный доступ к элементу
-	//вектор будет подходить так как мы в процессе работы нам не нужно удалять вершины или ребра
-	//нам нужно только извенять состояния и значения вершин и ребер
-	//так что я думаю все будет ок))
-
-	//Graph g(10);
-	//g.print();
 
 	
-	int V_size = 6, E_size = 7;
+	
+
+	int V_size = 7, E_size = 8;
 	std::vector<Vertex *> vertices;
 	std::vector<Edge *> edges;
 
@@ -272,11 +467,15 @@ int main()
 
 	}
 	Graph g(vertices, edges);
-	//g.print();
-	std::cout << "DFS: " << std::endl;
-	g.dfs_int(0);
-	g.print_dfs();
 
+
+	g.repead_method();
+	std::cout << "1-BRIGES: " << std::endl;
+	for (int i = 0; i < g.bridge.size(); i++)
+	{
+		std::cout << g.bridge[i]->get_pos().first << "---" << g.bridge[i]->get_pos().second << std::endl;
+	}
+	
 	std::cin.get();
 	std::cin.get();
 
