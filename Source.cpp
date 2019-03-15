@@ -4,9 +4,7 @@
 #include <ctime>
 #include <algorithm>
 
-
-
-
+int timer = 0;
 
 
 
@@ -228,6 +226,7 @@ public:
 	std::vector<Vertex *> dfs_vertices;
 	std::vector<Edge *> dfs_edges;
 	std::vector<Edge *> bridge;
+	std::vector<Edge *> one_briges_deter;
 	std::vector<Edge *> sort_edges;
 	std::vector<std::pair<Edge *, Edge *>> bridge_2;	
 
@@ -283,6 +282,7 @@ public:
 			std::cout << edges[i]->get_pos().first << "---" << edges[i]->get_pos().second << std::endl;
 		}
 	}
+
 	void print_dfs()
 	{
 		for (int i = 0; i < dfs_vertices.size(); ++i)
@@ -294,6 +294,7 @@ public:
 			std::cout << dfs_edges[i]->get_pos().first<<"---"<< dfs_edges[i]->get_pos().second << std::endl;
 		}
 	};
+
 	void dfs_ptr(Vertex* v)
 	{
 		//тут у меня отключился мозг(( пока не сообразила...но я думаю все тип топ
@@ -311,6 +312,7 @@ public:
 		v->set_value(Black);//красим в черный
 		dfs_vertices.push_back(v);
 	};
+
 	void dfs_int(int v)
 	{
 		vertices[v]->set_value(Gray);
@@ -438,6 +440,71 @@ public:
 		}
 	}
 
+	void determinate_one_bridge()
+	{
+		
+
+		std::vector<int> tin, fup;
+
+		for (int i = 0; i < vertices.size(); i++)
+		{
+
+			tin.push_back(INT_MAX);
+			fup.push_back(INT_MAX);
+		}
+
+		int timer = 0;
+		dfs_clean();
+		clean();
+
+
+		for (int i = 0; i < vertices.size() ; ++i)
+		{
+			
+			if (vertices[i]->get_value() == White)
+			{
+				dfs_deter(i, tin, fup);
+			}
+				
+		}
+
+		for (int i = 0; i < one_briges_deter.size(); ++i)
+		{
+			std::cout<< one_briges_deter[i]->get_pos().first<<"----"<< one_briges_deter[i]->get_pos().second << std::endl;
+		}
+	}
+
+	void dfs_deter(int v, std::vector<int> &tin, std::vector<int> &fup, int p = -1)
+	{
+		(timer)++;
+		tin[v] = timer;
+		fup[v] = timer;
+
+		vertices[v]->set_value(Gray);
+		for (int i = 0; i < vertices[v]->get_adjacent_vertices().size(); ++i)
+		{
+			int to = vertices[v]->get_adjacent_vertices()[i]->get_num();
+			if (p == to)
+				continue;
+			if (vertices[to]->get_value() != White)
+			{
+				fup[v] = std::min(fup[v], tin[to]);
+			}
+			else
+			{
+				dfs_deter(to,tin, fup, v);
+				fup[v] = std::min(fup[v], fup[to]);
+				if (fup[to] > tin[v])
+				{
+					one_briges_deter.push_back((edges[vertices[v]->get_adjacent_edges()[i]]));
+				}
+			}
+		}
+
+
+
+		
+	};
 };
 
 
@@ -445,11 +512,8 @@ int main()
 {
 	setlocale(LC_ALL, "Russian");
 	srand(time(0));
-
-	
-	
-
-	int V_size = 7, E_size = 8;
+	   
+	int V_size = 8, E_size = 10;
 	std::vector<Vertex *> vertices;
 	std::vector<Edge *> edges;
 
@@ -468,13 +532,15 @@ int main()
 	}
 	Graph g(vertices, edges);
 
+	g.determinate_one_bridge();
 
+	/*
 	g.repead_method();
 	std::cout << "1-BRIGES: " << std::endl;
 	for (int i = 0; i < g.bridge.size(); i++)
 	{
 		std::cout << g.bridge[i]->get_pos().first << "---" << g.bridge[i]->get_pos().second << std::endl;
-	}
+	}*/
 	
 	std::cin.get();
 	std::cin.get();
